@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube MP3 Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">
+                <i class="fab fa-youtube text-red-600 mr-2"></i>
+                YouTube MP3 Downloader
+            </h1>
+
+            <!-- Barre de recherche -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex gap-4">
+                    <input type="text" id="searchInput" 
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                           placeholder="Entrez le titre de la musique ou l'URL YouTube">
+                    <button onclick="searchVideos()" 
+                            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <i class="fas fa-search mr-2"></i>Rechercher
+                    </button>
+                </div>
+            </div>
+
+            <!-- Résultats de recherche -->
+            <div id="results" class="space-y-4"></div>
+
+            <!-- Message de chargement -->
+            <div id="loading" class="hidden text-center py-4">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+                <p class="mt-2 text-gray-600">Recherche en cours...</p>
+            </div>
+
+            <!-- Message d'erreur -->
+            <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline" id="errorMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDownload = null;
+
+        async function searchVideos() {
+            const searchInput = document.getElementById('searchInput');
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            // Afficher le chargement
+            loadingDiv.classList.remove('hidden');
+            resultsDiv.innerHTML = '';
+            errorDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+
+                if (results.length === 0) {
+                    errorDiv.querySelector('#errorMessage').textContent = 'Aucun résultat trouvé';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                resultsDiv.innerHTML = results.map((result, index) => `
+                    <div class="bg-white rounded-lg shadow-md p-4 flex items-center gap-4 hover:shadow-lg transition-shadow duration-200">
+                        <div class="flex-shrink-0">
+                            <img src="${result.thumbnail}" 
+                                 alt="${result.title}"
+                                 class="w-24 h-24 object-cover rounded"
+                                 loading="lazy">
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">${result.title}</h3>
+                            <p class="text-gray-600 text-sm">${result.channel}</p>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <button onclick="downloadVideo('${result.url}')" 
+                                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <i class="fas fa-download mr-2"></i>Télécharger
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                errorDiv.querySelector('#errorMessage').textContent = 'Erreur lors de la recherche';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+
+        async function downloadVideo(url) {
+            if (currentDownload) {
+                alert('Un téléchargement est déjà en cours. Veuillez attendre qu\'il se termine.');
+                return;
+            }
+
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+
+            loadingDiv.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Télécharger le fichier
+                window.location.href = `/downloads/${data.filename}`;
+            } catch (error) {
+                errorDiv.querySelector('#errorMessage').textContent = error.message || 'Erreur lors du téléchargement';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+                currentDownload = null;
+            }
+        }
+
+        // Rechercher quand on appuie sur Entrée
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchVideos();
+            }
+        });
+    </script>
+</body>
+</html> 
