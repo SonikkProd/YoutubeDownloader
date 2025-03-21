@@ -155,6 +155,63 @@ def progress_hook(d):
     elif d['status'] == 'finished':
         print(f"\n{Fore.CYAN}🔄 Conversion en MP3...{Style.RESET_ALL}")
 
+def search_and_download_by_title(title, artist=None):
+    """Recherche et télécharge une musique par titre et artiste"""
+    try:
+        # Construire la requête de recherche
+        search_query = f"{title}"
+        if artist:
+            search_query += f" {artist}"
+        
+        print(f"\n{Fore.CYAN}🔍 Recherche de : {search_query}{Style.RESET_ALL}")
+        
+        # Options pour la recherche
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'default_search': 'ytsearch5:',  # Limiter à 5 résultats
+        }
+        
+        # Rechercher la vidéo
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            try:
+                # Effectuer la recherche
+                results = ydl.extract_info(f"ytsearch5:{search_query}", download=False)['entries']
+                
+                if not results:
+                    print(f"\n{Fore.RED}❌ Aucun résultat trouvé.{Style.RESET_ALL}")
+                    return
+                
+                # Afficher les résultats
+                print(f"\n{Fore.YELLOW}📋 Résultats trouvés :{Style.RESET_ALL}")
+                for i, result in enumerate(results, 1):
+                    print(f"{Fore.CYAN}{i}. {result['title']} - {result['channel']}{Style.RESET_ALL}")
+                
+                # Demander à l'utilisateur de choisir
+                while True:
+                    try:
+                        choice = int(input(f"\n{Fore.YELLOW}Choisissez le numéro de la vidéo (1-{len(results)}) : {Style.RESET_ALL}"))
+                        if 1 <= choice <= len(results):
+                            break
+                        print(f"{Fore.RED}❌ Choix invalide. Veuillez réessayer.{Style.RESET_ALL}")
+                    except ValueError:
+                        print(f"{Fore.RED}❌ Veuillez entrer un nombre valide.{Style.RESET_ALL}")
+                
+                # Télécharger la vidéo sélectionnée
+                selected_video = results[choice-1]
+                if 'url' in selected_video:
+                    download_youtube_mp3(selected_video['url'])
+                else:
+                    print(f"\n{Fore.RED}❌ Impossible de récupérer l'URL de la vidéo.{Style.RESET_ALL}")
+                
+            except Exception as e:
+                print(f"\n{Fore.RED}❌ Erreur lors de la recherche : {str(e)}{Style.RESET_ALL}")
+                
+    except Exception as e:
+        print(f"\n{Fore.RED}❌ Erreur : {str(e)}{Style.RESET_ALL}")
+
 def main():
     print(f"{Fore.CYAN}=== YouTube MP3 Downloader ==={Style.RESET_ALL}")
     
@@ -168,16 +225,31 @@ def main():
     os.system('pip install --upgrade yt-dlp')
     
     while True:
-        url = input(f"\n{Fore.YELLOW}Entrez l'URL YouTube (ou 'q' pour quitter) : {Style.RESET_ALL}").strip()
+        print(f"\n{Fore.YELLOW}Choisissez une option :{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}1. Télécharger avec une URL YouTube{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}2. Rechercher par titre/artiste{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}q. Quitter{Style.RESET_ALL}")
         
-        if url.lower() == 'q':
+        choice = input(f"\n{Fore.YELLOW}Votre choix : {Style.RESET_ALL}").strip().lower()
+        
+        if choice == 'q':
             print(f"\n{Fore.GREEN}👋 Au revoir !{Style.RESET_ALL}")
             break
-            
-        if "youtube.com" in url or "youtu.be" in url:
-            download_youtube_mp3(url)
+        elif choice == '1':
+            url = input(f"\n{Fore.YELLOW}Entrez l'URL YouTube : {Style.RESET_ALL}").strip()
+            if "youtube.com" in url or "youtu.be" in url:
+                download_youtube_mp3(url)
+            else:
+                print(f"\n{Fore.RED}❌ URL YouTube invalide !{Style.RESET_ALL}")
+        elif choice == '2':
+            title = input(f"\n{Fore.YELLOW}Entrez le titre de la musique : {Style.RESET_ALL}").strip()
+            artist = input(f"{Fore.YELLOW}Entrez l'artiste (optionnel) : {Style.RESET_ALL}").strip()
+            if artist:
+                search_and_download_by_title(title, artist)
+            else:
+                search_and_download_by_title(title)
         else:
-            print(f"\n{Fore.RED}❌ URL YouTube invalide !{Style.RESET_ALL}")
+            print(f"\n{Fore.RED}❌ Option invalide !{Style.RESET_ALL}")
 
 if __name__ == "__main__":
     main()
