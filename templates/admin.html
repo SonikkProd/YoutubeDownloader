@@ -417,6 +417,11 @@
                                         <option value="admin">Administrateur</option>
                                     </select>
                                 </div>
+                                <div class="col-md-4">
+                                    <label for="quota" class="form-label">Quota de téléchargements</label>
+                                    <input type="number" class="form-control" id="quota" name="quota" value="100" min="0">
+                                    <div class="form-text">0 = illimité (admin uniquement)</div>
+                                </div>
                             </div>
                             <div class="mt-3">
                                 <button type="submit" class="btn btn-danger">
@@ -568,6 +573,11 @@
                                 <option value="admin">Administrateur</option>
                             </select>
                         </div>
+                        <div class="mb-3">
+                            <label for="newQuota" class="form-label">Quota de téléchargements</label>
+                            <input type="number" class="form-control" id="newQuota" name="quota" min="0">
+                            <div class="form-text">0 = illimité (admin uniquement)</div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
@@ -584,6 +594,7 @@
             document.getElementById('editUsername').value = username;
             document.getElementById('newPassword').value = '';
             document.getElementById('newRole').value = 'user';
+            document.getElementById('newQuota').value = '100';
             new bootstrap.Modal(document.getElementById('editUserModal')).show();
         }
 
@@ -603,6 +614,29 @@
                 form.submit();
             }
         }
+
+        // Mettre à jour le quota en fonction du rôle
+        document.getElementById('role').addEventListener('change', function() {
+            const quotaInput = document.getElementById('quota');
+            if (this.value === 'admin') {
+                quotaInput.value = '0';
+                quotaInput.disabled = true;
+            } else {
+                quotaInput.value = '100';
+                quotaInput.disabled = false;
+            }
+        });
+
+        document.getElementById('newRole').addEventListener('change', function() {
+            const quotaInput = document.getElementById('newQuota');
+            if (this.value === 'admin') {
+                quotaInput.value = '0';
+                quotaInput.disabled = true;
+            } else {
+                quotaInput.value = '100';
+                quotaInput.disabled = false;
+            }
+        });
     </script>
 </body>
 </html> 

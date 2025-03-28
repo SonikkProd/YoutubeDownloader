@@ -262,6 +262,11 @@
             color: var(--text-muted);
         }
 
+        .user-quota {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
         .hover-shadow {
             transition: all 0.3s ease;
         }
@@ -448,6 +453,14 @@
                                 <i class="fas fa-shield-alt me-1"></i>Administrateur
                                 {% else %}
                                 <i class="fas fa-user me-1"></i>Utilisateur
+                                {% endif %}
+                            </div>
+                            <div class="user-quota">
+                                <i class="fas fa-download me-1"></i>
+                                {% if current_user.role == 'admin' %}
+                                Téléchargements illimités
+                                {% else %}
+                                {{ get_remaining_downloads(current_user.id) }} téléchargements restants
                                 {% endif %}
                             </div>
                         </div>

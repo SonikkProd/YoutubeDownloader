@@ -87,14 +87,16 @@ users = {
         'role': 'admin',
         'display_name': 'Administrateur',
         'profile_image': None,
-        'bio': 'Administrateur du système'
+        'bio': 'Administrateur du système',
+        'download_quota': 0  # 0 = illimité pour les administrateurs
     },
     'user': {
         'password': generate_password_hash('user123'),
         'role': 'user',
         'display_name': 'Utilisateur',
         'profile_image': None,
-        'bio': ''
+        'bio': '',
+        'download_quota': 100  # Quota par défaut de 100 téléchargements
     }
 }
 
@@ -114,6 +116,7 @@ class User(UserMixin):
         self.display_name = users[username].get('display_name', username)
         self.profile_image = users[username].get('profile_image')
         self.bio = users[username].get('bio', '')
+        self.download_quota = users[username].get('download_quota', 100)  # Quota par défaut de 100
 
 @login_manager.user_loader
 def load_user(username):
@@ -155,6 +158,7 @@ def add_user():
     username = request.form.get('username')
     password = request.form.get('password')
     role = request.form.get('role', 'user')
+    quota = int(request.form.get('quota', 100))  # Quota par défaut de 100
     
     if username in users:
         flash('Ce nom d\'utilisateur existe déjà', 'error')
@@ -162,7 +166,8 @@ def add_user():
     
     users[username] = {
         'password': generate_password_hash(password),
-        'role': role
+        'role': role,
+        'download_quota': 0 if role == 'admin' else quota
     }
     flash('Utilisateur créé avec succès', 'success')
     return redirect(url_for('admin'))
@@ -174,6 +179,7 @@ def edit_user():
     username = request.form.get('username')
     new_password = request.form.get('password')
     new_role = request.form.get('role')
+    new_quota = request.form.get('quota')
     
     if username not in users:
         flash('Utilisateur non trouvé')
@@ -183,6 +189,10 @@ def edit_user():
         users[username]['password'] = generate_password_hash(new_password)
     if new_role:
         users[username]['role'] = new_role
+        # Mettre à jour le quota en fonction du rôle
+        users[username]['download_quota'] = 0 if new_role == 'admin' else int(new_quota or 100)
+    elif new_quota and users[username]['role'] != 'admin':
+        users[username]['download_quota'] = int(new_quota)
     
     flash('Utilisateur modifié avec succès')
     return redirect(url_for('admin'))
@@ -452,6 +462,10 @@ def download():
     if not video_url:
         return jsonify({'error': 'URL non fournie'}), 400
     
+    # Vérifier le quota de l'utilisateur
+    if not check_download_quota(current_user.id):
+        return jsonify({'error': 'Vous avez atteint votre limite de téléchargements'}), 403
+    
     try:
         # Définir les options pour la récupération des informations
         ydl_opts = {
@@ -483,7 +497,8 @@ def download():
             return jsonify({
                 'success': True,
                 'filename': filename,
-                'title': title
+                'title': title,
+                'remaining_downloads': get_remaining_downloads(current_user.id)
             })
                 
     except Exception as e:
@@ -517,6 +532,43 @@ def get_file(filename):
     except Exception as e:
         app.logger.error(f"Erreur lors de la récupération du fichier: {str(e)}")
         return "Erreur lors de la récupération du fichier", 500
+
+def check_download_quota(user_id):
+    """Vérifie si l'utilisateur a encore des téléchargements disponibles"""
+    user = users.get(user_id)
+    if not user:
+        return False
+    
+    # Les administrateurs ont un quota illimité (0)
+    if user['role'] == 'admin':
+        return True
+    
+    # Compter les téléchargements de l'utilisateur dans les logs
+    user_downloads = sum(1 for log in download_logs if log['username'] == user_id)
+    
+    return user_downloads < user['download_quota']
+
+def get_remaining_downloads(user_id):
+    """Retourne le nombre de téléchargements restants pour l'utilisateur"""
+    user = users.get(user_id)
+    if not user:
+        return 0
+    
+    # Les administrateurs ont un quota illimité
+    if user['role'] == 'admin':
+        return "Illimité"
+    
+    # Compter les téléchargements de l'utilisateur dans les logs
+    user_downloads = sum(1 for log in download_logs if log['username'] == user_id)
+    
+    return user['download_quota'] - user_downloads
+
+# Ajouter cette fonction après la création de l'app Flask
+@app.context_processor
+def utility_processor():
+    return {
+        'get_remaining_downloads': get_remaining_downloads
+    }
 
 if __name__ == '__main__':
     if not check_ffmpeg():
