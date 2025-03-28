@@ -1,66 +1,76 @@
 # YouTube MP3 Downloader
 
-Une application web simple et élégante pour télécharger des musiques YouTube en format MP3. Cette application permet de rechercher et télécharger facilement vos musiques préférées avec une interface utilisateur intuitive.
+Une application web Flask permettant de rechercher et télécharger des vidéos YouTube en format MP3 haute qualité (320kbps).
 
-## 🎯 Fonctionnalités
+## 🚀 Fonctionnalités
 
-- 🔍 Recherche de vidéos YouTube par titre ou URL
-- 🎵 Téléchargement en MP3 de haute qualité
-- 🖼️ Affichage des miniatures des vidéos
-- 📱 Interface responsive et moderne
-- ⚡ Téléchargement rapide et efficace
-- 🎨 Interface utilisateur intuitive
+- 🔍 Recherche de vidéos YouTube en temps réel
+- ⬇️ Téléchargement en format MP3 haute qualité (320kbps)
+- 👤 Système d'authentification utilisateur
+- 🎨 Interface moderne et responsive
+- 📱 Compatible mobile
+- 🔄 Barre de progression pour les téléchargements
+- ⌨️ Recherche via la touche Entrée
+- 🎯 Gestion des erreurs et retours visuels
 
 ## 📋 Prérequis
 
 - Python 3.8 ou supérieur
+- FFmpeg
 - pip (gestionnaire de paquets Python)
-- FFmpeg (pour la conversion audio)
 
-## 🛠️ Installation
+## 💻 Installation
 
-1. Clonez ce dépôt :
+1. **Cloner le repository**
 ```bash
-git clone https://github.com/SonikkProd/youtube-to-mp3.git
-cd youtube-to-mp3
+git clone [URL_DU_REPO]
+cd youtube-mp3-downloader
 ```
 
-2. Installez FFmpeg :
-   - **Windows** : Téléchargez FFmpeg depuis [le site officiel](https://ffmpeg.org/download.html) et ajoutez-le à votre PATH
-   - **Linux** : `sudo apt-get install ffmpeg`
-   - **macOS** : `brew install ffmpeg`
-
-3. Créez un environnement virtuel (recommandé) :
+2. **Créer un environnement virtuel**
 ```bash
 python -m venv venv
-# Windows
+```
+
+3. **Activer l'environnement virtuel**
+- Windows :
+```bash
 venv\Scripts\activate
-# Linux/macOS
+```
+- Linux/MacOS :
+```bash
 source venv/bin/activate
 ```
 
-4. Installez les dépendances :
+4. **Installer les dépendances**
 ```bash
 pip install -r requirements.txt
 ```
 
-## 🚀 Utilisation
+5. **Installer FFmpeg**
+- Windows : Télécharger depuis [ffmpeg.org](https://ffmpeg.org/download.html) et ajouter au PATH
+- Linux : `sudo apt-get install ffmpeg`
+- MacOS : `brew install ffmpeg`
 
-1. Démarrez l'application :
+## ⚙️ Configuration
+
+1. **Créer un fichier `.env` à la racine du projet**
+```env
+SECRET_KEY=votre_clé_secrète
+```
+
+2. **Configurer les identifiants administrateur**
+Modifier le fichier `config.py` avec vos identifiants souhaités.
+
+## 🚀 Lancement
+
+1. **Démarrer l'application**
 ```bash
 python app.py
 ```
 
-2. Ouvrez votre navigateur et accédez à :
-```
-http://localhost:5000
-```
-
-3. Utilisez l'application :
-   - Entrez le titre de la musique ou l'URL YouTube dans la barre de recherche
-   - Cliquez sur "Rechercher" ou appuyez sur Entrée
-   - Sélectionnez la vidéo souhaitée parmi les résultats
-   - Cliquez sur "Télécharger" pour obtenir le fichier MP3
+2. **Accéder à l'application**
+Ouvrir un navigateur et aller à `http://localhost:5000`
 
 ## 📁 Structure du projet
 
