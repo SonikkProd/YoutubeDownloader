@@ -1,0 +1,87 @@
+<!-- Ajouter dans le head -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<style>
+/* Personnalisation des notifications */
+#toast-container > div {
+    opacity: 0.9;
+    border-radius: 8px;
+    padding: 15px 15px 15px 50px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.toast-success {
+    background-color: #28a745 !important;
+}
+
+.toast-error {
+    background-color: #dc3545 !important;
+}
+
+.toast-info {
+    background-color: #17a2b8 !important;
+}
+
+.toast-warning {
+    background-color: #ffc107 !important;
+    color: #333 !important;
+}
+
+#toast-container > div:hover {
+    opacity: 1;
+    cursor: pointer;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+</style>
+
+<script>
+// Configuration de Toastr
+toastr.options = {
+    "closeButton": true,
+    "debug": false,
+    "newestOnTop": true,
+    "progressBar": true,
+    "positionClass": "toast-top-right",
+    "preventDuplicates": false,
+    "showDuration": "300",
+    "hideDuration": "1000",
+    "timeOut": "5000",
+    "extendedTimeOut": "1000",
+    "showEasing": "swing",
+    "hideEasing": "linear",
+    "showMethod": "fadeIn",
+    "hideMethod": "fadeOut"
+}
+
+// Fonction pour afficher les notifications
+function showNotification(type, message) {
+    switch(type) {
+        case 'success':
+            toastr.success(message);
+            break;
+        case 'error':
+            toastr.error(message);
+            break;
+        case 'info':
+            toastr.info(message);
+            break;
+        case 'warning':
+            toastr.warning(message);
+            break;
+    }
+}
+
+// Gérer les messages Flask
+document.addEventListener('DOMContentLoaded', function() {
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                showNotification('{{ category }}', '{{ message }}');
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+});
+</script> 

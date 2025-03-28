@@ -3,144 +3,680 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube MP3 Downloader</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>YouTube Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-4xl mx-auto">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">
-                <i class="fab fa-youtube text-red-600 mr-2"></i>
-                YouTube MP3 Downloader
-            </h1>
+    <style>
+        :root {
+            --primary-color: #ff0000;
+            --secondary-color: #282828;
+            --background-color: #f9f9f9;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --text-muted: #606060;
+        }
 
-            <!-- Barre de recherche -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div class="flex gap-4">
-                    <input type="text" id="searchInput" 
-                           class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                           placeholder="Entrez le titre de la musique ou l'URL YouTube">
-                    <button onclick="searchVideos()" 
-                            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        <i class="fas fa-search mr-2"></i>Rechercher
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .navbar {
+            background-color: var(--card-background) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .search-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .search-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--secondary-color);
+        }
+
+        .search-box {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-control {
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(255,0,0,0.1);
+        }
+
+        .btn-danger {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #cc0000;
+            transform: translateY(-1px);
+        }
+
+        .result-card {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+            border: none;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .thumbnail {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-text {
+            color: var(--text-muted);
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .profile-image {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e5e5e5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-menu-button {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .user-menu-button:hover {
+            color: var(--primary-color);
+        }
+
+        .user-menu-button::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: rotate(45deg);
+            transition: transform 0.2s ease;
+        }
+
+        .user-menu-button[aria-expanded="true"]::after {
+            transform: rotate(-135deg);
+        }
+
+        .profile-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e5e5e5;
+            transition: border-color 0.2s ease;
+        }
+
+        .user-menu-button:hover .profile-image {
+            border-color: var(--primary-color);
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            min-width: 220px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .dropdown-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 0.75rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+            transform: translateX(4px);
+        }
+
+        .dropdown-item:hover i {
+            color: var(--primary-color);
+        }
+
+        .dropdown-divider {
+            margin: 0.5rem 0;
+            border-color: #e5e5e5;
+        }
+
+        .user-info {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e5e5e5;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .hover-shadow {
+            transition: all 0.3s ease;
+        }
+
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+        }
+
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+
+        .duration-badge {
+            backdrop-filter: blur(4px);
+            background-color: rgba(0,0,0,0.7) !important;
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        .download-btn {
+            background-color: #ff0000;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background-color: #cc0000;
+            transform: translateY(-2px);
+        }
+
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .card-img-top {
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-img-top {
+            transform: scale(1.05);
+        }
+
+        #loading {
+            max-width: 500px;
+            margin: 2rem auto;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+
+        #progressText {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .video-card {
+            transition: all 0.3s ease;
+            border: none !important;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+        .thumbnail-container {
+            position: relative;
+            overflow: hidden;
+            height: 180px;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .video-card:hover .video-thumbnail {
+            transform: scale(1.05);
+        }
+
+        .duration-badge {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .video-info {
+            padding: 1rem;
+        }
+
+        .video-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            height: 2.8em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .channel-name {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .download-btn {
+            width: 100%;
+            border: none;
+            background: #ff0000;
+            color: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #cc0000;
+            transform: translateY(-2px);
+        }
+
+        .search-progress-container {
+            padding: 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .spinner-grow {
+            opacity: 0.7;
+        }
+
+        #searchProgressText {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fab fa-youtube text-danger me-2"></i>
+                YouTube Downloader
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="user-menu">
+                    <button class="user-menu-button" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) if current_user.profile_image else url_for('static', filename='default-profile.png') }}" 
+                             alt="Photo de profil" 
+                             class="profile-image">
+                        <span>{{ current_user.display_name }}</span>
                     </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <div class="user-info">
+                            <div class="user-name">{{ current_user.display_name }}</div>
+                            <div class="user-role">
+                                {% if current_user.role == 'admin' %}
+                                <i class="fas fa-shield-alt me-1"></i>Administrateur
+                                {% else %}
+                                <i class="fas fa-user me-1"></i>Utilisateur
+                                {% endif %}
+                            </div>
+                        </div>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('settings') }}">
+                                <i class="fas fa-cog"></i>Paramètres
+                            </a>
+                        </li>
+                        {% if current_user.role == 'admin' %}
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('admin') }}">
+                                <i class="fas fa-users-cog"></i>Administration
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i>Déconnexion
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
+        </div>
+    </nav>
 
-            <!-- Résultats de recherche -->
-            <div id="results" class="space-y-4"></div>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="search-container text-center">
+                    <h1 class="mb-4">YouTube MP3 Downloader</h1>
+                    <div class="input-group mb-3">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Rechercher une vidéo...">
+                        <button class="btn btn-danger" onclick="searchVideo()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <!-- Message de chargement -->
-            <div id="loading" class="hidden text-center py-4">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-                <p class="mt-2 text-gray-600">Recherche en cours...</p>
-            </div>
+                <div id="searchLoading" class="d-none">
+                    <div class="search-progress-container text-center my-4">
+                        <div class="spinner-grow text-danger mx-1" role="status" style="width: 1rem; height: 1rem;">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <div class="spinner-grow text-danger mx-1" role="status" style="width: 1rem; height: 1rem; animation-delay: 0.2s;">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <div class="spinner-grow text-danger mx-1" role="status" style="width: 1rem; height: 1rem; animation-delay: 0.4s;">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="text-muted mt-2" id="searchProgressText">Recherche en cours...</p>
+                    </div>
+                </div>
 
-            <!-- Message d'erreur -->
-            <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline" id="errorMessage"></span>
+                <div id="loading" class="d-none">
+                    <div class="text-center mb-3">
+                        <div class="spinner-border text-danger" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar bg-danger" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p id="progressText" class="text-center mt-2">Initialisation du téléchargement...</p>
+                </div>
+
+                <div id="error" class="alert alert-danger d-none">
+                    <span id="errorMessage"></span>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div class="row g-4" id="searchResults"></div>
+                </div>
+
+                <!-- Déplacer le template en dehors du div results -->
+                <template id="videoTemplate">
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card video-card shadow-sm">
+                            <div class="thumbnail-container">
+                                <img src="" alt="" class="video-thumbnail">
+                                <span class="duration-badge"></span>
+                            </div>
+                            <div class="video-info">
+                                <h5 class="video-title"></h5>
+                                <p class="channel-name mb-3"></p>
+                                <button class="download-btn">
+                                    <i class="fas fa-download me-2"></i>
+                                    Télécharger MP3
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentDownload = null;
-
-        async function searchVideos() {
-            const searchInput = document.getElementById('searchInput');
-            const resultsDiv = document.getElementById('results');
-            const loadingDiv = document.getElementById('loading');
-            const errorDiv = document.getElementById('error');
-            
-            const query = searchInput.value.trim();
+        function searchVideo() {
+            const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
 
-            // Afficher le chargement
-            loadingDiv.classList.remove('hidden');
-            resultsDiv.innerHTML = '';
-            errorDiv.classList.add('hidden');
+            const searchLoadingDiv = document.getElementById('searchLoading');
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
 
-            try {
-                const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
-                const results = await response.json();
+            // Afficher l'animation de recherche
+            searchLoadingDiv.classList.remove('d-none');
+            errorDiv.classList.add('d-none');
+            resultsDiv.classList.add('d-none');
 
-                if (results.length === 0) {
-                    errorDiv.querySelector('#errorMessage').textContent = 'Aucun résultat trouvé';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(results => {
+                    const container = document.getElementById('searchResults');
+                    container.innerHTML = '';
 
-                resultsDiv.innerHTML = results.map((result, index) => `
-                    <div class="bg-white rounded-lg shadow-md p-4 flex items-center gap-4 hover:shadow-lg transition-shadow duration-200">
-                        <div class="flex-shrink-0">
-                            <img src="${result.thumbnail}" 
-                                 alt="${result.title}"
-                                 class="w-24 h-24 object-cover rounded"
-                                 loading="lazy">
-                        </div>
-                        <div class="flex-grow">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-1 line-clamp-2">${result.title}</h3>
-                            <p class="text-gray-600 text-sm">${result.channel}</p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <button onclick="downloadVideo('${result.url}')" 
-                                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                <i class="fas fa-download mr-2"></i>Télécharger
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                errorDiv.querySelector('#errorMessage').textContent = 'Erreur lors de la recherche';
-                errorDiv.classList.remove('hidden');
-            } finally {
-                loadingDiv.classList.add('hidden');
-            }
+                    results.forEach(video => {
+                        const clone = document.getElementById('videoTemplate').content.cloneNode(true);
+                        
+                        const img = clone.querySelector('.video-thumbnail');
+                        img.src = video.thumbnail;
+                        img.alt = video.title;
+                        
+                        clone.querySelector('.video-title').textContent = video.title;
+                        clone.querySelector('.channel-name').textContent = video.channel;
+                        
+                        const duration = parseInt(video.duration);
+                        const minutes = Math.floor(duration / 60);
+                        const seconds = duration % 60;
+                        clone.querySelector('.duration-badge').textContent = 
+                            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        const downloadBtn = clone.querySelector('.download-btn');
+                        downloadBtn.onclick = () => downloadVideo(video.url);
+                        
+                        container.appendChild(clone);
+                    });
+                    
+                    // Cacher l'animation de recherche et afficher les résultats
+                    searchLoadingDiv.classList.add('d-none');
+                    resultsDiv.classList.remove('d-none');
+                })
+                .catch(error => {
+                    errorDiv.querySelector('#errorMessage').textContent = 'Erreur lors de la recherche';
+                    errorDiv.classList.remove('d-none');
+                    searchLoadingDiv.classList.add('d-none');
+                });
         }
 
-        async function downloadVideo(url) {
-            if (currentDownload) {
-                alert('Un téléchargement est déjà en cours. Veuillez attendre qu\'il se termine.');
+        function downloadVideo(url) {
+            if (!url) {
+                console.error('URL manquante');
                 return;
             }
 
             const loadingDiv = document.getElementById('loading');
             const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
 
-            loadingDiv.classList.remove('hidden');
-            errorDiv.classList.add('hidden');
-
-            try {
-                const response = await fetch('/download', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url }),
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
+            loadingDiv.classList.remove('d-none');
+            errorDiv.classList.add('d-none');
+            resultsDiv.classList.add('d-none');
+            
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 85) {
+                    if (progress < 30) {
+                        progress += Math.random() * 5;
+                    } else if (progress < 60) {
+                        progress += Math.random() * 8;
+                    } else {
+                        progress += Math.random() * 3;
+                    }
+                    
+                    progress = Math.min(progress, 85);
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.setAttribute('aria-valuenow', progress);
+                    
+                    if (progress < 30) {
+                        progressText.textContent = "Récupération des informations de la vidéo...";
+                    } else if (progress < 60) {
+                        progressText.textContent = "Téléchargement de la vidéo...";
+                    } else {
+                        progressText.textContent = "Conversion en MP3...";
+                    }
                 }
+            }, 800);
 
-                // Télécharger le fichier
-                window.location.href = `/downloads/${data.filename}`;
-            } catch (error) {
-                errorDiv.querySelector('#errorMessage').textContent = error.message || 'Erreur lors du téléchargement';
-                errorDiv.classList.remove('hidden');
-            } finally {
-                loadingDiv.classList.add('hidden');
-                currentDownload = null;
-            }
+            fetch(`/download?url=${encodeURIComponent(url)}`)
+                .then(response => response.json())
+                .then(data => {
+                    clearInterval(progressInterval);
+                    if (data.error) {
+                        errorDiv.querySelector('#errorMessage').textContent = data.error;
+                        errorDiv.classList.remove('d-none');
+                        resultsDiv.classList.remove('d-none');
+                    } else {
+                        progressBar.style.width = '100%';
+                        progressBar.setAttribute('aria-valuenow', 100);
+                        progressText.textContent = "Téléchargement terminé !";
+                        
+                        window.location.href = `/downloads/${data.filename}`;
+                        
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+                    errorDiv.querySelector('#errorMessage').textContent = 'Une erreur est survenue lors du téléchargement';
+                    errorDiv.classList.remove('d-none');
+                    resultsDiv.classList.remove('d-none');
+                })
+                .finally(() => {
+                    clearInterval(progressInterval);
+                });
         }
 
-        // Rechercher quand on appuie sur Entrée
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchVideos();
+        // Ajouter cet événement après la fonction searchVideo
+        document.getElementById('searchInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Empêche le comportement par défaut
+                searchVideo();
             }
         });
     </script>

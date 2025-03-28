@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - YouTube Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #ff0000;
+            --secondary-color: #282828;
+            --background-color: #f9f9f9;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --text-muted: #606060;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .navbar {
+            background-color: var(--card-background) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .admin-header {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .admin-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .admin-subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .nav-tabs {
+            border: none;
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            margin-right: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: var(--primary-color);
+            background-color: rgba(255,0,0,0.05);
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background-color: rgba(255,0,0,0.1);
+        }
+
+        .nav-tabs .nav-link i {
+            margin-right: 0.5rem;
+        }
+
+        .tab-content {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 2rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            background: none;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 0;
+        }
+
+        .form-control {
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(255,0,0,0.1);
+        }
+
+        .btn-danger {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #cc0000;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-danger {
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-danger:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            border-top: none;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 1rem;
+        }
+
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .badge {
+            padding: 0.5rem 0.75rem;
+            font-weight: 500;
+            border-radius: 6px;
+        }
+
+        .badge-admin {
+            background-color: rgba(255,0,0,0.1);
+            color: var(--primary-color);
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-menu-button {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-color);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .user-menu-button:hover {
+            color: var(--primary-color);
+        }
+
+        .user-menu-button::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: rotate(45deg);
+            transition: transform 0.2s ease;
+        }
+
+        .user-menu-button[aria-expanded="true"]::after {
+            transform: rotate(-135deg);
+        }
+
+        .profile-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e5e5e5;
+            transition: border-color 0.2s ease;
+        }
+
+        .user-menu-button:hover .profile-image {
+            border-color: var(--primary-color);
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            min-width: 220px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .dropdown-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 0.75rem;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+            transform: translateX(4px);
+        }
+
+        .dropdown-item:hover i {
+            color: var(--primary-color);
+        }
+
+        .dropdown-divider {
+            margin: 0.5rem 0;
+            border-color: #e5e5e5;
+        }
+
+        .user-info {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e5e5e5;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #e5e5e5;
+            padding: 1.5rem;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e5e5e5;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barre de navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fab fa-youtube text-danger me-2"></i>
+                YouTube Downloader
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="user-menu">
+                    <button class="user-menu-button" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) if current_user.profile_image else url_for('static', filename='default-profile.png') }}" 
+                             alt="Photo de profil" 
+                             class="profile-image">
+                        <span>{{ current_user.display_name }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <div class="user-info">
+                            <div class="user-name">{{ current_user.display_name }}</div>
+                            <div class="user-role">
+                                <i class="fas fa-shield-alt me-1"></i>Administrateur
+                            </div>
+                        </div>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('settings') }}">
+                                <i class="fas fa-cog"></i>Paramètres
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('admin') }}">
+                                <i class="fas fa-users-cog"></i>Administration
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i>Déconnexion
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1 class="admin-title">
+                <i class="fas fa-shield-alt text-danger me-2"></i>
+                Administration
+            </h1>
+            <p class="admin-subtitle">Gérez votre application et ses utilisateurs</p>
+        </div>
+
+        <!-- Onglets -->
+        <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
+                    <i class="fas fa-users"></i>Utilisateurs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                    <i class="fas fa-cogs"></i>Paramètres
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">
+                    <i class="fas fa-history"></i>Logs
+                </button>
+            </li>
+        </ul>
+
+        <!-- Contenu des onglets -->
+        <div class="tab-content" id="adminTabsContent">
+            <!-- Onglet Utilisateurs -->
+            <div class="tab-pane fade show active" id="users" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-user-plus me-2"></i>Ajouter un utilisateur
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('add_user') }}">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="username" class="form-label">Nom d'utilisateur</label>
+                                    <input type="text" class="form-control" id="username" name="username" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="password" class="form-label">Mot de passe</label>
+                                    <input type="password" class="form-control" id="password" name="password" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="role" class="form-label">Rôle</label>
+                                    <select class="form-select" id="role" name="role">
+                                        <option value="user">Utilisateur</option>
+                                        <option value="admin">Administrateur</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-plus me-2"></i>Ajouter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-users me-2"></i>Liste des utilisateurs
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Nom d'utilisateur</th>
+                                        <th>Rôle</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for username, user_data in users.items() %}
+                                    <tr>
+                                        <td>{{ username }}</td>
+                                        <td>
+                                            {% if user_data.role == 'admin' %}
+                                            <span class="badge badge-admin">
+                                                <i class="fas fa-shield-alt me-1"></i>Administrateur
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-user me-1"></i>Utilisateur
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger me-2" 
+                                                    onclick="editUser('{{ username }}')"
+                                                    {% if username == 'admin' %}disabled{% endif %}>
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deleteUser('{{ username }}')"
+                                                    {% if username == 'admin' %}disabled{% endif %}>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Paramètres -->
+            <div class="tab-pane fade" id="settings" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-cog me-2"></i>Paramètres généraux
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Les paramètres seront bientôt disponibles.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Logs -->
+            <div class="tab-pane fade" id="logs" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-history me-2"></i>Journal des téléchargements
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Utilisateur</th>
+                                        <th>Titre de la vidéo</th>
+                                        <th>URL</th>
+                                        <th>Fichier</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in download_logs|sort(attribute='timestamp', reverse=true) %}
+                                    <tr>
+                                        <td>{{ log.timestamp }}</td>
+                                        <td>{{ log.username }}</td>
+                                        <td>{{ log.video_title }}</td>
+                                        <td>
+                                            <a href="{{ log.video_url }}" target="_blank" class="text-danger">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </td>
+                                        <td>{{ log.filename }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            Aucun téléchargement enregistré
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'édition d'utilisateur -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Modifier l'utilisateur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('edit_user') }}">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="username" id="editUsername">
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nouveau mot de passe</label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password">
+                            <div class="form-text">Laissez vide pour ne pas modifier le mot de passe</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newRole" class="form-label">Rôle</label>
+                            <select class="form-select" id="newRole" name="role">
+                                <option value="user">Utilisateur</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function editUser(username) {
+            document.getElementById('editUsername').value = username;
+            document.getElementById('newPassword').value = '';
+            document.getElementById('newRole').value = 'user';
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+        }
+
+        function deleteUser(username) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('delete_user') }}";
+                
+                const usernameInput = document.createElement('input');
+                usernameInput.type = 'hidden';
+                usernameInput.name = 'username';
+                usernameInput.value = username;
+                
+                form.appendChild(usernameInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html> 

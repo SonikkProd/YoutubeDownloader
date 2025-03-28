@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash, current_app
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 import yt_dlp
 import subprocess
@@ -8,15 +9,242 @@ import requests
 from mutagen import File
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
 from io import BytesIO
-
-app = Flask(__name__)
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from PIL import Image
+from datetime import datetime
+import time
+import shutil
+from celery import Celery
+from celery.schedules import crontab
+import re
+import urllib.parse
 
 # Configuration
 DOWNLOAD_FOLDER = "downloads"
 ALLOWED_EXTENSIONS = {'mp3'}
+UPLOAD_FOLDER = "static/uploads/profiles"
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+FILE_RETENTION_HOURS = 24  # Les fichiers seront supprimés après 24h
 
-# Créer le dossier de téléchargement s'il n'existe pas
+# Configuration Celery
+celery = Celery('youtube_downloader',
+                broker='redis://localhost:6379/0',
+                backend='redis://localhost:6379/0')
+
+# Configurer les tâches périodiques
+celery.conf.beat_schedule = {
+    'cleanup-every-hour': {
+        'task': 'app.cleanup_old_files',
+        'schedule': crontab(minute=0)  # Toutes les heures
+    }
+}
+
+# Structure pour stocker les logs
+download_logs = []
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Clé secrète pour les sessions
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Configuration du dossier d'upload
+app.config['DOWNLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
+
+# Initialisation du gestionnaire de login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Créer les dossiers nécessaires
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Créer une image par défaut si elle n'existe pas
+default_profile_path = os.path.join('static', 'default-profile.png')
+if not os.path.exists(default_profile_path):
+    # Créer une image grise de 200x200 pixels
+    img = Image.new('RGB', (200, 200), color='#CCCCCC')
+    img.save(default_profile_path)
+
+def allowed_file(filename, allowed_extensions):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def save_profile_image(file, username):
+    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
+        filename = secure_filename(f"{username}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Redimensionner l'image
+        img = Image.open(file)
+        img.thumbnail((200, 200))  # Taille maximale de 200x200 pixels
+        img.save(filepath, quality=85)
+        
+        return filename
+    return None
+
+# Utilisateurs prédéfinis
+users = {
+    'admin': {
+        'password': generate_password_hash('admin123'),
+        'role': 'admin',
+        'display_name': 'Administrateur',
+        'profile_image': None,
+        'bio': 'Administrateur du système'
+    },
+    'user': {
+        'password': generate_password_hash('user123'),
+        'role': 'user',
+        'display_name': 'Utilisateur',
+        'profile_image': None,
+        'bio': ''
+    }
+}
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'admin':
+            flash('Accès non autorisé')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+        self.role = users[username]['role']
+        self.display_name = users[username].get('display_name', username)
+        self.profile_image = users[username].get('profile_image')
+        self.bio = users[username].get('bio', '')
+
+@login_manager.user_loader
+def load_user(username):
+    if username in users:
+        return User(username)
+    return None
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username in users and check_password_hash(users[username]['password'], password):
+            user = User(username)
+            login_user(user)
+            return redirect(url_for('index'))
+        
+        flash('Nom d\'utilisateur ou mot de passe incorrect')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/admin')
+@login_required
+@admin_required
+def admin():
+    return render_template('admin.html', users=users, download_logs=download_logs)
+
+@app.route('/admin/user/add', methods=['POST'])
+@login_required
+@admin_required
+def add_user():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'user')
+    
+    if username in users:
+        flash('Ce nom d\'utilisateur existe déjà', 'error')
+        return redirect(url_for('admin'))
+    
+    users[username] = {
+        'password': generate_password_hash(password),
+        'role': role
+    }
+    flash('Utilisateur créé avec succès', 'success')
+    return redirect(url_for('admin'))
+
+@app.route('/admin/user/edit', methods=['POST'])
+@login_required
+@admin_required
+def edit_user():
+    username = request.form.get('username')
+    new_password = request.form.get('password')
+    new_role = request.form.get('role')
+    
+    if username not in users:
+        flash('Utilisateur non trouvé')
+        return redirect(url_for('admin'))
+    
+    if new_password:
+        users[username]['password'] = generate_password_hash(new_password)
+    if new_role:
+        users[username]['role'] = new_role
+    
+    flash('Utilisateur modifié avec succès')
+    return redirect(url_for('admin'))
+
+@app.route('/admin/user/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_user():
+    username = request.form.get('username')
+    
+    if username not in users:
+        flash('Utilisateur non trouvé')
+        return redirect(url_for('admin'))
+    
+    if username == 'admin':
+        flash('Impossible de supprimer l\'administrateur principal')
+        return redirect(url_for('admin'))
+    
+    del users[username]
+    flash('Utilisateur supprimé avec succès')
+    return redirect(url_for('admin'))
+
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html', user=current_user)
+
+@app.route('/settings/update', methods=['POST'])
+@login_required
+def update_settings():
+    username = current_user.id
+    display_name = request.form.get('display_name')
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    bio = request.form.get('bio')
+    
+    # Vérifier le mot de passe actuel si un nouveau est fourni
+    if new_password:
+        if not current_password or not check_password_hash(users[username]['password'], current_password):
+            flash('Mot de passe actuel incorrect')
+            return redirect(url_for('settings'))
+        users[username]['password'] = generate_password_hash(new_password)
+    
+    # Mettre à jour le nom d'affichage
+    if display_name:
+        users[username]['display_name'] = display_name
+    
+    # Mettre à jour la bio
+    if bio is not None:
+        users[username]['bio'] = bio
+    
+    # Gérer l'upload de l'image de profil
+    if 'profile_image' in request.files:
+        file = request.files['profile_image']
+        if file.filename:
+            filename = save_profile_image(file, username)
+            if filename:
+                users[username]['profile_image'] = filename
+                flash('Image de profil mise à jour avec succès')
+    
+    flash('Paramètres mis à jour avec succès')
+    return redirect(url_for('settings'))
 
 def check_ffmpeg():
     """Vérifie si ffmpeg est installé et accessible"""
@@ -27,14 +255,12 @@ def check_ffmpeg():
         return False
 
 def sanitize_filename(filename):
-    """Nettoie le nom de fichier"""
-    invalid_chars = '<>:"/\\|?*\n\r'
-    filename = filename.strip()
-    for char in invalid_chars:
-        filename = filename.replace(char, '_')
-    while '__' in filename:
-        filename = filename.replace('__', '_')
-    return filename
+    """Nettoie le nom de fichier en retirant les caractères problématiques"""
+    # Remplacer les slashes et autres caractères problématiques par des tirets
+    filename = re.sub(r'[/\\?%*:|"<>]', '-', filename)
+    # Remplacer les espaces multiples par un seul espace
+    filename = re.sub(r'\s+', ' ', filename)
+    return filename.strip()
 
 def add_metadata_to_mp3(mp3_path, video_info):
     """Ajoute les métadonnées et l'image à un fichier MP3"""
@@ -78,104 +304,139 @@ def add_metadata_to_mp3(mp3_path, video_info):
         return False
 
 def search_videos(query):
-    """Recherche des vidéos YouTube"""
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': True,  # Réactivé pour une recherche plus rapide
-        'default_search': 'ytsearch5:',
-        'no_check_certificates': True,
-        'prefer_insecure': True,
-    }
-    
     try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'default_search': 'ytsearch10'
+        }
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            results = ydl.extract_info(f"ytsearch5:{query}", download=False)['entries']
-            valid_results = []
+            results = ydl.extract_info(f"ytsearch10:{query}", download=False)
+            videos = []
             
-            for result in results:
-                try:
-                    # Vérifier si la vidéo est téléchargeable
-                    if result.get('is_live') or result.get('availability') == 'private':
-                        continue
-                    
-                    # Utiliser la miniature de plus petite taille (default.jpg)
-                    video_id = result.get('id', '')
-                    thumbnail = f"https://img.youtube.com/vi/{video_id}/default.jpg"
-                    
-                    valid_results.append({
-                        'title': result['title'],
-                        'channel': result['channel'],
-                        'url': result['url'],
-                        'thumbnail': thumbnail
-                    })
-                except Exception as e:
-                    continue
-            
-            return valid_results
+            if 'entries' in results:
+                for video in results['entries']:
+                    if video:
+                        # Récupérer la meilleure miniature disponible
+                        thumbnail = None
+                        if 'thumbnails' in video and video['thumbnails']:
+                            # Prendre la dernière miniature (généralement la meilleure qualité)
+                            thumbnail = video['thumbnails'][-1]['url']
+                        elif 'thumbnail' in video:
+                            thumbnail = video['thumbnail']
+                            
+                        videos.append({
+                            'title': video.get('title', ''),
+                            'url': f"https://www.youtube.com/watch?v={video.get('id', '')}",
+                            'thumbnail': thumbnail,  # URL de la miniature
+                            'duration': video.get('duration', 0),
+                            'channel': video.get('channel', '')
+                        })
+            return videos
     except Exception as e:
         print(f"Erreur lors de la recherche : {str(e)}")
         return []
 
-def download_mp3(url):
-    """Télécharge et convertit une vidéo YouTube en MP3"""
+def get_video_info(url):
     try:
         ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '320',
-            }],
-            'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'),
-            'no_check_certificates': True,
-            'prefer_insecure': True,
-            'format_sort': ['abr:320'],
-            'postprocessor_args': [
-                '-codec:a', 'libmp3lame',
-                '-q:a', '0',
-                '-b:a', '320k',
-            ],
-            'writesubtitles': False,
-            'writeautomaticsub': False,
-            'extract_flat': False,
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True
         }
-        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            clean_title = sanitize_filename(info['title'])
-            mp3_filename = f"{clean_title}.mp3"
-            mp3_path = os.path.join(DOWNLOAD_FOLDER, mp3_filename)
-            
-            # Récupérer la meilleure qualité d'image disponible
-            thumbnail = info.get('thumbnail', '')
-            if not thumbnail:
-                # Essayer de récupérer la meilleure qualité d'image disponible
-                thumbnails = info.get('thumbnails', [])
-                if thumbnails:
-                    # Trier par résolution et prendre la plus haute
-                    thumbnails.sort(key=lambda x: x.get('width', 0) * x.get('height', 0), reverse=True)
-                    thumbnail = thumbnails[0].get('url', '')
-            
-            # Ajouter les métadonnées
-            video_info = {
+            info = ydl.extract_info(url, download=False)
+            return {
                 'title': info['title'],
-                'channel': info['channel'],
-                'thumbnail': thumbnail
+                'channel': info.get('channel', 'Unknown Channel'),
+                'thumbnail': info.get('thumbnail', ''),
+                'duration': info.get('duration', 0)
             }
-            add_metadata_to_mp3(mp3_path, video_info)
-            
-            return mp3_filename
     except Exception as e:
-        print(f"Erreur lors du téléchargement : {str(e)}")
+        print(f"Erreur lors de la récupération des informations : {str(e)}")
         return None
 
+def get_user_folder(user_id):
+    """Crée et retourne le dossier de téléchargement spécifique à l'utilisateur"""
+    user_folder = os.path.join(DOWNLOAD_FOLDER, str(user_id))
+    os.makedirs(user_folder, exist_ok=True)
+    return user_folder
+
+@celery.task
+def process_download(url, user_id):
+    """Tâche Celery pour gérer le téléchargement en arrière-plan"""
+    try:
+        user_folder = get_user_folder(user_id)
+        
+        # Récupérer les informations de la vidéo
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'no_check_certificates': True,
+            'prefer_insecure': True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique_id = f"{user_id}_{timestamp}"
+            mp3_filename = f"{info['title']}_{unique_id}.mp3"
+            mp3_path = os.path.join(user_folder, mp3_filename)
+            
+            # Télécharger la vidéo
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '320',
+                }],
+                'outtmpl': os.path.join(user_folder, '%(title)s_' + unique_id + '.%(ext)s'),
+                'no_check_certificates': True,
+                'prefer_insecure': True
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+                
+            return {
+                'success': True,
+                'filename': mp3_filename,
+                'title': info['title']
+            }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@celery.task
+def cleanup_old_files():
+    """Tâche Celery pour nettoyer les fichiers anciens"""
+    try:
+        current_time = datetime.now()
+        for user_folder in os.listdir(DOWNLOAD_FOLDER):
+            user_path = os.path.join(DOWNLOAD_FOLDER, user_folder)
+            if os.path.isdir(user_path):
+                for filename in os.listdir(user_path):
+                    file_path = os.path.join(user_path, filename)
+                    file_time = datetime.fromtimestamp(os.path.getctime(file_path))
+                    age_hours = (current_time - file_time).total_seconds() / 3600
+                    
+                    if age_hours > FILE_RETENTION_HOURS:
+                        os.remove(file_path)
+                
+                # Supprimer le dossier utilisateur s'il est vide
+                if not os.listdir(user_path):
+                    os.rmdir(user_path)
+    except Exception as e:
+        print(f"Erreur lors du nettoyage : {str(e)}")
+
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/search')
+@login_required
 def search():
     query = request.args.get('q', '')
     if not query:
@@ -184,31 +445,78 @@ def search():
     results = search_videos(query)
     return jsonify(results)
 
-@app.route('/download', methods=['POST'])
+@app.route('/download')
+@login_required
 def download():
-    url = request.json.get('url')
-    if not url:
-        return jsonify({'error': 'URL manquante'}), 400
+    video_url = request.args.get('url')
+    if not video_url:
+        return jsonify({'error': 'URL non fournie'}), 400
     
-    filename = download_mp3(url)
-    if not filename:
-        return jsonify({'error': 'Erreur lors du téléchargement'}), 500
-    
-    return jsonify({
-        'success': True,
-        'filename': filename
-    })
+    try:
+        # Définir les options pour la récupération des informations
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320'  # Forcer la qualité à 320kbps
+            }],
+            'outtmpl': os.path.join(app.config['DOWNLOAD_FOLDER'], '%(title)s.%(ext)s'),
+            'quiet': True,
+            'no_warnings': True
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=True)
+            title = info['title']
+            filename = f"{title}.mp3"
+            
+            # Ajouter le log de téléchargement
+            download_logs.append({
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'username': current_user.id,
+                'video_title': title,
+                'video_url': video_url,
+                'filename': filename
+            })
+            
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'title': title
+            })
+                
+    except Exception as e:
+        print(f"Erreur lors du téléchargement : {str(e)}")
+        return jsonify({'error': f"Erreur lors du téléchargement : {str(e)}"}), 500
 
-@app.route('/downloads/<filename>')
+@app.route('/downloads/<path:filename>')
 def get_file(filename):
     try:
+        # Décoder le nom du fichier
+        decoded_filename = urllib.parse.unquote(filename)
+        # Ajouter l'extension .mp3 si elle n'est pas présente
+        if not decoded_filename.endswith('.mp3'):
+            decoded_filename += '.mp3'
+            
+        # Construire le chemin complet
+        file_path = os.path.join(app.config['DOWNLOAD_FOLDER'], decoded_filename)
+        
+        # Vérifier si le fichier existe
+        if not os.path.exists(file_path):
+            app.logger.error(f"Fichier non trouvé: {file_path}")
+            return "Fichier non trouvé", 404
+            
+        # Retourner le fichier
         return send_file(
-            os.path.join(DOWNLOAD_FOLDER, filename),
+            file_path,
             as_attachment=True,
-            download_name=filename
+            download_name=decoded_filename
         )
+        
     except Exception as e:
-        return jsonify({'error': 'Fichier non trouvé'}), 404
+        app.logger.error(f"Erreur lors de la récupération du fichier: {str(e)}")
+        return "Erreur lors de la récupération du fichier", 500
 
 if __name__ == '__main__':
     if not check_ffmpeg():
