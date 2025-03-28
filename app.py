@@ -89,14 +89,6 @@ users = {
         'profile_image': None,
         'bio': 'Administrateur du système',
         'download_quota': 0  # 0 = illimité pour les administrateurs
-    },
-    'user': {
-        'password': generate_password_hash('user123'),
-        'role': 'user',
-        'display_name': 'Utilisateur',
-        'profile_image': None,
-        'bio': '',
-        'download_quota': 100  # Quota par défaut de 100 téléchargements
     }
 }
 

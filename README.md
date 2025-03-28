@@ -112,11 +112,7 @@ L'application sera accessible à l'adresse : `http://localhost:5000`
   - Quota : Illimité
   - Accès : Toutes les fonctionnalités
 
-- **Utilisateur standard**
-  - Utilisateur : user
-  - Mot de passe : user123
-  - Quota : 100 téléchargements
-  - Accès : Fonctionnalités de base
+> Note : Les utilisateurs standards devront être créés manuellement via l'interface d'administration.
 
 ## Structure du projet
 
