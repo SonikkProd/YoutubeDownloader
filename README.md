@@ -1,108 +1,173 @@
 # YouTube MP3 Downloader
 
-Une application web Flask permettant de rechercher et télécharger des vidéos YouTube en format MP3 haute qualité (320kbps).
+Une application web Flask permettant de télécharger des vidéos YouTube en format MP3 avec gestion des utilisateurs et des quotas de téléchargement.
 
-## 🚀 Fonctionnalités
+## Fonctionnalités
 
-- 🔍 Recherche de vidéos YouTube en temps réel
-- ⬇️ Téléchargement en format MP3 haute qualité (320kbps)
-- 👤 Système d'authentification utilisateur
-- 🎨 Interface moderne et responsive
-- 📱 Compatible mobile
-- 🔄 Barre de progression pour les téléchargements
-- ⌨️ Recherche via la touche Entrée
-- 🎯 Gestion des erreurs et retours visuels
+- 🎵 Conversion des vidéos YouTube en MP3 haute qualité (320kbps)
+- 🔍 Recherche de vidéos YouTube
+- 👥 Système d'authentification avec rôles (admin/utilisateur)
+- 📊 Gestion des quotas de téléchargement par utilisateur
+- 👤 Profils utilisateurs personnalisables
+- 📝 Journalisation des téléchargements
+- 🧹 Nettoyage automatique des fichiers anciens
+- 🎨 Interface utilisateur moderne et responsive
+- 🔒 Sécurité renforcée avec validation des fichiers
+- 📱 Compatible mobile et desktop
 
-## 📋 Prérequis
+## Prérequis
 
-- Python 3.8 ou supérieur
+- Python 3.8+
 - FFmpeg
+- Redis Server
 - pip (gestionnaire de paquets Python)
 
-## 💻 Installation
+## Installation
 
-1. **Cloner le repository**
+1. **Cloner le dépôt**
 ```bash
-git clone [URL_DU_REPO]
-cd youtube-mp3-downloader
+git clone <url-du-repo>
+cd youtube-downloader
 ```
 
 2. **Créer un environnement virtuel**
 ```bash
 python -m venv venv
+source venv/bin/activate  # Sur Linux/Mac
+# ou
+venv\Scripts\activate  # Sur Windows
 ```
 
-3. **Activer l'environnement virtuel**
-- Windows :
-```bash
-venv\Scripts\activate
-```
-- Linux/MacOS :
-```bash
-source venv/bin/activate
-```
-
-4. **Installer les dépendances**
+3. **Installer les dépendances**
 ```bash
 pip install -r requirements.txt
 ```
 
-5. **Installer FFmpeg**
-- Windows : Télécharger depuis [ffmpeg.org](https://ffmpeg.org/download.html) et ajouter au PATH
-- Linux : `sudo apt-get install ffmpeg`
-- MacOS : `brew install ffmpeg`
+4. **Installer FFmpeg**
 
-## ⚙️ Configuration
-
-1. **Créer un fichier `.env` à la racine du projet**
-```env
-SECRET_KEY=votre_clé_secrète
+Sur Debian/Ubuntu :
+```bash
+sudo apt update
+sudo apt install ffmpeg
 ```
 
-2. **Configurer les identifiants administrateur**
-Modifier le fichier `config.py` avec vos identifiants souhaités.
+Sur macOS avec Homebrew :
+```bash
+brew install ffmpeg
+```
 
-## 🚀 Lancement
+Sur Windows :
+- Télécharger FFmpeg depuis [ffmpeg.org](https://ffmpeg.org/download.html)
+- Ajouter le dossier bin à votre PATH système
 
-1. **Démarrer l'application**
+5. **Installer et démarrer Redis**
+
+Sur Debian/Ubuntu :
+```bash
+sudo apt install redis-server
+sudo systemctl start redis
+```
+
+Sur macOS :
+```bash
+brew install redis
+brew services start redis
+```
+
+Sur Windows :
+- Télécharger Redis depuis [redis.io](https://redis.io/download)
+- Suivre les instructions d'installation
+
+## Configuration
+
+1. **Créer les dossiers nécessaires**
+```bash
+mkdir downloads
+mkdir static/uploads/profiles
+```
+
+2. **Démarrer Celery (dans un terminal séparé)**
+```bash
+celery -A app.celery worker --loglevel=info
+```
+
+3. **Démarrer Celery Beat (dans un terminal séparé)**
+```bash
+celery -A app.celery beat --loglevel=info
+```
+
+## Lancement de l'application
+
 ```bash
 python app.py
 ```
 
-2. **Accéder à l'application**
-Ouvrir un navigateur et aller à `http://localhost:5000`
+L'application sera accessible à l'adresse : `http://localhost:5000`
 
-## 📁 Structure du projet
+## Comptes par défaut
+
+- **Administrateur**
+  - Utilisateur : admin
+  - Mot de passe : admin123
+  - Quota : Illimité
+  - Accès : Toutes les fonctionnalités
+
+- **Utilisateur standard**
+  - Utilisateur : user
+  - Mot de passe : user123
+  - Quota : 100 téléchargements
+  - Accès : Fonctionnalités de base
+
+## Structure du projet
 
 ```
-youtube-to-mp3/
-├── app.py              # Application Flask principale
-├── requirements.txt    # Dépendances du projet
-├── templates/         # Templates HTML
-│   └── index.html     # Page principale
-└── downloads/        # Dossier de téléchargement (créé automatiquement)
+youtube-downloader/
+├── app.py                 # Application principale
+├── requirements.txt       # Dépendances Python
+├── downloads/            # Dossier des téléchargements
+├── static/
+│   ├── uploads/         # Dossier des images de profil
+│   └── default-profile.png
+└── templates/           # Templates HTML
+    ├── admin.html       # Interface d'administration
+    ├── index.html       # Page principale
+    ├── login.html       # Page de connexion
+    └── settings.html    # Page des paramètres
 ```
 
-## ⚙️ Configuration
+## Fonctionnalités administrateur
 
-L'application utilise les paramètres suivants par défaut :
-- Format audio : MP3
-- Qualité : Meilleure qualité disponible
-- Dossier de téléchargement : `downloads/`
+- Gestion des utilisateurs (création, modification, suppression)
+- Configuration des quotas de téléchargement
+- Consultation des logs de téléchargement
+- Accès aux statistiques d'utilisation
+- Gestion des profils utilisateurs
 
-## 🔒 Sécurité
+## Fonctionnalités utilisateur
 
-- Les fichiers téléchargés sont stockés localement
-- Aucune donnée n'est envoyée à des serveurs tiers
-- Les fichiers sont supprimés automatiquement après le téléchargement
+- Recherche de vidéos YouTube
+- Téléchargement en MP3 haute qualité
+- Personnalisation du profil
+- Suivi du quota de téléchargement
+- Historique des téléchargements
 
-## ⚠️ Limitations
+## Sécurité
 
-- Un seul téléchargement à la fois
-- Les vidéos privées ne sont pas accessibles
-- Certaines vidéos peuvent être protégées contre le téléchargement
+- Mots de passe hashés avec Werkzeug
+- Protection contre les injections de fichiers
+- Validation des extensions de fichiers
+- Nettoyage automatique des fichiers temporaires
+- Gestion des sessions sécurisée
+- Protection CSRF
 
-## 🤝 Contribution
+## Maintenance
+
+- Les fichiers téléchargés sont automatiquement supprimés après 24 heures
+- Nettoyage automatique des fichiers temporaires
+- Journalisation des erreurs et des actions importantes
+- Gestion des quotas par utilisateur
+
+## Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à :
 1. Fork le projet
@@ -111,9 +176,16 @@ Les contributions sont les bienvenues ! N'hésitez pas à :
 4. Pousser vers la branche
 5. Ouvrir une Pull Request
 
-## 📄 Licence
+## Support
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Pour toute question ou problème :
+- Ouvrir une issue sur GitHub
+- Consulter la documentation
+- Contacter l'administrateur
+
+## Licence
+
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ## 🙏 Remerciements
 

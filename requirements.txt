@@ -1,7 +1,9 @@
-flask==3.0.2
-yt-dlp==2025.2.19
-colorama==0.4.6
-mutagen==1.47.0
-requests==2.31.0
-Flask-Login==0.6.3
-Werkzeug==3.0.1 
+Flask==2.0.1
+Flask-Login==0.5.0
+yt-dlp==2023.3.4
+Pillow==9.0.0
+Werkzeug==2.0.1
+celery==5.2.3
+redis==4.1.0
+mutagen==1.45.1
+requests==2.26.0 
