@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -405,13 +404,17 @@
                                     <tr>
                                         <th>Nom d'utilisateur</th>
                                         <th>Rôle</th>
+                                        <th>Téléchargements restants</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for username, user_data in users.items() %}
                                     <tr>
-                                        <td>{{ username }}</td>
+                                        <td>
+                                            {{ username }}
+                                        
+                                        </td>
                                         <td>
                                             {% if user_data.role == 'admin' %}
                                             <span class="badge badge-admin">
@@ -420,6 +423,17 @@
                                             {% else %}
                                             <span class="badge bg-secondary">
                                                 <i class="fas fa-user me-1"></i>Utilisateur
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user_data.role == 'admin' %}
+                                            <span class="badge bg-success ms-2">
+                                                <i class="fas fa-infinity me-1"></i>Illimité
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-info ms-2">
+                                                <i class="fas fa-download me-1"></i>{{ user_data.quota }} téléchargements
                                             </span>
                                             {% endif %}
                                         </td>
@@ -554,7 +568,17 @@
             document.getElementById('editUsername').value = username;
             document.getElementById('newPassword').value = '';
             document.getElementById('newRole').value = role;
-            document.getElementById('newQuota').value = quota;
+            
+            // Gestion du quota en fonction du rôle
+            const quotaInput = document.getElementById('newQuota');
+            if (role === 'admin') {
+                quotaInput.value = '0';
+                quotaInput.disabled = true;
+            } else {
+                quotaInput.value = quota || '100'; // Utilise le quota passé ou 100 par défaut
+                quotaInput.disabled = false;
+            }
+            
             new bootstrap.Modal(document.getElementById('editUserModal')).show();
         }
 

@@ -1,0 +1,8 @@
+{
+    "admin": {
+        "role": "admin",
+        "quota": 0,
+        "display_name": "Administrateur",
+        "profile_image": "default-profile.png"
+    }
+}
